@@ -1,0 +1,22 @@
+{
+    "name": "LitTimeline.Editor",
+    "rootNamespace": "LitTimeline.Editor",
+    "references": [
+        "LitTimeline.Runtime",
+        "LitMotion",
+        "LitMotion.Editor",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

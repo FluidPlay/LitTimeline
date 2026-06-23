@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d9506e990f03f04994ae6e553d492ff, type: 3}
+  m_Name: SceneRoot_LitTimelineClip
+  m_EditorClassIdentifier: LitTimeline.Runtime::LitTimeline.LitTimelineClip
+  data:
+    displayName: Sequence
+    timeScale: 1
+    playOnAwake: 0
+    autoKillOnComplete: 1
+    entries:
+    - entryId: 0978fe32-bcf5-43f9-b93e-aece6d827f45
+      trackId: 368cc6c4-4b97-43d2-a923-b12d96d1ba6e
+      displayName: 
+      binding:
+        hierarchyPath: Main Camera
+        componentTypeName: UnityEngine.Transform
+        propertyName: localPosition
+        axis: 0
+      startValue:
+        type: 2
+        floatValue: 0
+        vector2Value: {x: 0, y: 0}
+        vector3Value: {x: 0, y: 1, z: -10}
+        colorValue: {r: 0, g: 0, b: 0, a: 0}
+      endValue:
+        type: 2
+        floatValue: 0
+        vector2Value: {x: 0, y: 0}
+        vector3Value: {x: -10, y: 1, z: -10}
+        colorValue: {r: 0, g: 0, b: 0, a: 0}
+      useCurrentAsStart: 0
+      linkedStartEntryId: 
+      duration: 4.0299997
+      delay: 0
+      speed: 1
+      ease: 24
+      useCustomCurve: 0
+      customEaseCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      loopType: 0
+      loops: 1
+      isEnabled: 1
+      trackColor: {r: 0.28, g: 0.56, b: 0.9, a: 0.9}
+      isExpanded: 0
+    - entryId: dc4f6031-2ef9-43cd-a9d3-89792f61dc1f
+      trackId: 83084db9-4b7a-448b-8b62-860fb77dc8a8
+      displayName: 
+      binding:
+        hierarchyPath: Sphere
+        componentTypeName: UnityEngine.Transform
+        propertyName: localPosition
+        axis: 0
+      startValue:
+        type: 2
+        floatValue: 0
+        vector2Value: {x: 0, y: 0}
+        vector3Value: {x: 0, y: 0, z: 0}
+        colorValue: {r: 0, g: 0, b: 0, a: 0}
+      endValue:
+        type: 2
+        floatValue: 0
+        vector2Value: {x: 0, y: 0}
+        vector3Value: {x: -10, y: 0, z: 0}
+        colorValue: {r: 0, g: 0, b: 0, a: 0}
+      useCurrentAsStart: 0
+      linkedStartEntryId: 
+      duration: 2.37
+      delay: 2.74
+      speed: 1
+      ease: 17
+      useCustomCurve: 0
+      customEaseCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      loopType: 0
+      loops: 1
+      isEnabled: 1
+      trackColor: {r: 0.9, g: 0.45, b: 0.28, a: 0.9}
+      isExpanded: 0
+    markers: []
