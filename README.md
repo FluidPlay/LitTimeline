@@ -1,6 +1,8 @@
 # LitTimeline
 ### Timeline Editor and Runtime for LitMotion (Unity Game Engine)
 
+<img width="1065" height="289" alt="image" src="https://github.com/user-attachments/assets/6655b5fc-20fa-49bd-b200-9a00ebc13ed0" />
+
 A FOSS port of TweenAnimator (https://github.com/AtilganSak/TweenAnimator) for LitMotion (https://github.com/AnnulusGames/LitMotion).
 In comparison with DOTween, the Tweening engine used by TweenAnimator, LitMotion offers zero allocations with a struct-based design.
 Litmotion is an Extremely high-performance implementation optimized using DOTS (Data-Oriented Technology Stack).
@@ -48,6 +50,8 @@ Copy the Assets/LitTimeline folder into your project's Assets folder
 Add a `LitTimelineController` component to any GameObject via **Add Component → LitTimeline → LitTimeline Controller**.
 
 When added, Unity prompts you to save a new **LitTimelineClip** asset — this ScriptableObject holds all animation data.
+
+<img width="496" height="287" alt="image" src="https://github.com/user-attachments/assets/631760ef-c00c-4b89-bc3d-ca9602db8edb" />
 
 ### 2. Open the Editor Window
 
