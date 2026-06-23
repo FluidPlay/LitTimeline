@@ -1,7 +1,7 @@
 # LitTimeline
-### Timeline Editor and Runtime for LitMotion
+### Timeline Editor and Runtime for LitMotion (Unity Game Engine)
 
-A FOSS port of TweenAnimator (https://github.com/AtilganSak/TweenAnimator) for LitMotion.
+A FOSS port of TweenAnimator (https://github.com/AtilganSak/TweenAnimator) for LitMotion (https://github.com/AnnulusGames/LitMotion).
 In comparison with DOTween, the Tweening engine used by TweenAnimator, LitMotion offers zero allocations with a struct-based design.
 Litmotion is an Extremely high-performance implementation optimized using DOTS (Data-Oriented Technology Stack).
 
