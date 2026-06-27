@@ -73,10 +73,19 @@ namespace LitTimeline.Editor
 
                 EditorGUI.BeginDisabledGroup(!EditorApplication.isPlaying);
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Play")) ctrl.Play();
-                if (GUILayout.Button("Pause")) ctrl.Pause();
-                if (GUILayout.Button("Stop")) ctrl.Stop();
-                if (GUILayout.Button("Rewind")) ctrl.Rewind();
+                if (GUILayout.Button("Play")) 
+                    ctrl.Play();
+                if (ctrl.IsPaused)
+                {
+                    if (GUILayout.Button("Resume")) 
+                        ctrl.Resume();
+                }
+                else if (GUILayout.Button("Pause")) 
+                    ctrl.Pause();
+                if (GUILayout.Button("Stop")) 
+                    ctrl.Stop();
+                if (GUILayout.Button("Rewind")) 
+                    ctrl.Rewind();
                 GUILayout.EndHorizontal();
                 EditorGUI.EndDisabledGroup();
             }
@@ -91,5 +100,7 @@ namespace LitTimeline.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_onLoop"));
             serializedObject.ApplyModifiedProperties();
         }
+
+        public override bool RequiresConstantRepaint() => EditorApplication.isPlaying;
     }
 }
