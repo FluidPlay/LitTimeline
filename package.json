@@ -14,8 +14,12 @@
 		"com.unity.mathematics": "1.0.1"
 	},  
 	"author": {
-	"name": "Breno Azevedo",
-	"email": "maddox.br@gmail.com",
-	"url": "https://fluidplay.co/"
+		"name": "Breno Azevedo",
+		"email": "maddox.br@gmail.com",
+		"url": "https://fluidplay.co/"
 	}
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/FluidPlay/LitTimeline.git?path=src/LitTimeline/Assets/LitTimeline"
+	}	
 }
