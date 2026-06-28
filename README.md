@@ -37,7 +37,9 @@ Litmotion is an Extremely high-performance implementation optimized using DOTS (
 Open Window → Package Manager
 Click the + button → Add package from git URL…
 Enter:
-https://github.com/fluidplay/littimeline.git
+
+
+[https://github.com/fluidplay/littimeline.git?path=Assets/LitTimeline](https://github.com/FluidPlay/LitTimeline.git?path=Assets/LitTimeline)
 
 ### Option B — Manual
 Clone or download this repository
