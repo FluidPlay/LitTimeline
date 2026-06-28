@@ -1,12 +1,21 @@
 {
-  "name": "co.fluidplay.littimeline",
-  "version": "1.0.0",
-  "displayName": "LitTimeline",
-  "description": "Timeline Editor and Runtime for LitMotion Tweener, for the Unity Game Engine",
-  "unity": "6000.2",
-  "author": {
-    "name": "Breno Azevedo",
-    "email": "maddox.br@gmail.com",
-    "url": "https://fluidplay.co/"
-  }
+	"name": "co.fluidplay.littimeline",
+	"version": "1.0.0",
+	"displayName": "LitTimeline",
+	"description": "Timeline Editor and Runtime for LitMotion Tweener, for the Unity Game Engine",
+	"unity": "6000.2",
+    "keywords": [
+        "dots",
+        "tween"
+    ],  
+	"dependencies": {
+		"com.unity.burst": "1.6.0",
+		"com.unity.collections": "1.5.1",
+		"com.unity.mathematics": "1.0.1"
+	},  
+	"author": {
+	"name": "Breno Azevedo",
+	"email": "maddox.br@gmail.com",
+	"url": "https://fluidplay.co/"
+	}
 }
