@@ -20,6 +20,6 @@
 	}
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/FluidPlay/LitTimeline.git?path=src/LitTimeline/Assets/LitTimeline"
+		"url": "https://github.com/FluidPlay/LitTimeline.git?path=LitTimeline/Assets/LitTimeline"
 	}	
 }
