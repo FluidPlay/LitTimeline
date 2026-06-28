@@ -1,0 +1,12 @@
+{
+  "name": "co.fluidplay.littimeline",
+  "version": "1.0.0",
+  "displayName": "LitTimeline",
+  "description": "Timeline Editor and Runtime for LitMotion Tweener, for the Unity Game Engine",
+  "unity": "6000.2",
+  "author": {
+    "name": "Breno Azevedo",
+    "email": "maddox.br@gmail.com",
+    "url": "https://fluidplay.co/"
+  }
+}
