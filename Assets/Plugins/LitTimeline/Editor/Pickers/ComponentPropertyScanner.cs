@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace LitTimeline.Editor
 {
@@ -60,23 +61,23 @@ namespace LitTimeline.Editor
         {
             if (renderer.sharedMaterial == null) return;
             var shader = renderer.sharedMaterial.shader;
-            int count = ShaderUtil.GetPropertyCount(shader);
+            int count = shader.GetPropertyCount();
             for (int i = 0; i < count; i++)
             {
-                if (ShaderUtil.IsShaderPropertyHidden(shader, i)) continue;
-                var shaderPropType = ShaderUtil.GetPropertyType(shader, i);
-                string shaderPropName = ShaderUtil.GetPropertyName(shader, i);
-                string shaderPropDesc = ShaderUtil.GetPropertyDescription(shader, i);
+                if (shader.GetPropertyFlags(i).HasFlag(ShaderPropertyFlags.HideInInspector))
+                    continue;
+                var shaderPropType = shader.GetPropertyType(i); //ShaderUtil.GetPropertyType(shader, i));
+                string shaderPropName = shader.GetPropertyName(i); //ShaderUtil.GetPropertyName(shader, i));
+                string shaderPropDesc = shader.GetPropertyDescription(i); //ShaderUtil.GetPropertyDescription(shader, i));
 
                 string propName;
                 PropertyType valueType;
-
-                if (shaderPropType == ShaderUtil.ShaderPropertyType.Color)
+                if (shaderPropType == ShaderPropertyType.Color) //if (shaderPropType == ShaderUtil.ShaderPropertyType.Color)
                 {
                     propName = "mat_color:" + shaderPropName;
                     valueType = PropertyType.Color;
-                }
-                else continue;
+                } else 
+                    continue;
 
                 results.Add(new DiscoveredProperty
                 {
