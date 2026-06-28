@@ -1,6 +1,6 @@
 {
     "name": "LitTimeline.Editor",
-    "rootNamespace": "LitTimeline.Editor",
+    "rootNamespace": "LitTimeline",
     "references": [
         "LitTimeline.Runtime",
         "LitMotion",
