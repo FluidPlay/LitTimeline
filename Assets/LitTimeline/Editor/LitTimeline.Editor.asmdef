@@ -6,7 +6,8 @@
         "LitMotion",
         "LitMotion.Editor",
         "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "spine-unity"
     ],
     "includePlatforms": [
         "Editor"

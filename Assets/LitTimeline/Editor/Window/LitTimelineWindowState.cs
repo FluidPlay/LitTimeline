@@ -54,6 +54,13 @@ namespace LitTimeline.Editor
             _lastAppliedTime = -1f;
             _useCurrentStartCache.Clear();
             RestoreSnapshot();
+#if USING_SPINE
+            // Snapshot/restore only covers tween-tracked properties; Spine skeletons
+            // need an explicit setup-pose reset so they don't keep showing the last
+            // posed frame after the user exits Preview.
+            if (Controller != null)
+                SpineLayerDriver.Reset(Controller, Controller.Sequence);
+#endif
             IsPreviewEnabled = false;
             EditorApplication.QueuePlayerLoopUpdate();
             SceneView.RepaintAll();
@@ -186,6 +193,13 @@ namespace LitTimeline.Editor
 
                 accessor.ApplyValue(component, LerpValue(from, entry.endValue, easedT));
             }
+
+#if USING_SPINE
+            // Spine layers are driven outside the tween accessor path: pose every
+            // referenced SkeletonAnimation at the current time after all tweens have
+            // applied (Spine doesn't share property setters with tween entries).
+            SpineLayerDriver.Pose(Controller, Controller.Sequence, time);
+#endif
         }
 
         private static PropertyValueUnion LerpValue(PropertyValueUnion a, PropertyValueUnion b, float t)

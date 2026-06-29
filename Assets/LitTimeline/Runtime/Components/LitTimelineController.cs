@@ -15,6 +15,10 @@ namespace LitTimeline
     {
     }
 
+    [Serializable] public class TimelineStringUnityEvent : UnityEvent<string>
+    {
+    }
+
     [DisallowMultipleComponent]
     [AddComponentMenu("LitTimeline/Lit Timeline Controller")]
     public class LitTimelineController : MonoBehaviour
@@ -27,6 +31,7 @@ namespace LitTimeline
         [SerializeField] private UnityEvent _onStop = new UnityEvent();
         [SerializeField] private UnityEvent _onComplete = new UnityEvent();
         [SerializeField] private TimelineLoopUnityEvent _onLoop = new TimelineLoopUnityEvent();
+        [SerializeField] private TimelineStringUnityEvent _onSpineEvent = new TimelineStringUnityEvent();
 
         // C# events for code subscribers
         public event Action OnPlay;
@@ -34,6 +39,7 @@ namespace LitTimeline
         public event Action OnStop;
         public event Action OnComplete;
         public event Action<int> OnLoop;
+        public event Action<string> OnSpineEvent;
 
         // LitMotion does not expose Pause or reverse playback, so the controller advances the
         // sequence handle's Time manually. The built handle is held paused (PlaybackSpeed = 0)
@@ -43,6 +49,10 @@ namespace LitTimeline
         private int _direction = 1;
         private bool _isPlaying;
         private bool _isComplete;
+
+        // Spine layers are driven outside LitMotion, so the Update loop must run even
+        // when the built LitMotion sequence is empty. Recomputed in Rebuild().
+        private bool _hasSpineLayers;
 
         // Callback polling
         private double _lastPollTime;
@@ -56,11 +66,16 @@ namespace LitTimeline
         public TimelineSequenceData Sequence => clip != null ? clip.Data : null;
 
         // ── State ─────────────────────────────────────────────────────────────
+
+        // Sequence is "live" if either a LitMotion handle is active OR the clip has
+        // Spine layers (which we drive ourselves, with no backing MotionHandle).
+        private bool IsBuilt => _seqHandle.IsActive() || _hasSpineLayers;
+
         /// <summary>Sequence is built and actively playing.</summary>
-        public bool IsPlaying => _seqHandle.IsActive() && _isPlaying;
+        public bool IsPlaying => IsBuilt && _isPlaying;
 
         /// <summary>Sequence is built but paused mid-playback.</summary>
-        public bool IsPaused => _seqHandle.IsActive() && !_isPlaying && !_isComplete;
+        public bool IsPaused => IsBuilt && !_isPlaying && !_isComplete;
 
         /// <summary>True after the sequence played to its end (reset on next Play).</summary>
         public bool IsComplete => _isComplete;
@@ -69,7 +84,7 @@ namespace LitTimeline
         public float Duration => Sequence?.TotalDuration ?? 0f;
 
         /// <summary>Elapsed playback time in seconds.</summary>
-        public float CurrentTime => _seqHandle.IsActive() ? (float)_time : 0f;
+        public float CurrentTime => IsBuilt ? (float)_time : 0f;
 
         /// <summary>Elapsed time as 0–1 normalized value.</summary>
         public float NormalizedTime => Duration > 0f ? Mathf.Clamp01(CurrentTime / Duration) : 0f;
@@ -190,6 +205,14 @@ namespace LitTimeline
         public UnityEvent OnStopEvent => _onStop;
         public UnityEvent OnCompleteEvent => _onComplete;
         public TimelineLoopUnityEvent OnLoopEvent => _onLoop;
+        public TimelineStringUnityEvent OnSpineEventEvent => _onSpineEvent;
+
+        internal void RaiseSpineEvent(string eventName)
+        {
+            if (string.IsNullOrEmpty(eventName)) return;
+            _onSpineEvent.Invoke(eventName);
+            OnSpineEvent?.Invoke(eventName);
+        }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
         private void Awake()
@@ -202,7 +225,8 @@ namespace LitTimeline
 
         private void Update()
         {
-            if (!_isPlaying || !_seqHandle.IsActive()) return;
+            if (!_isPlaying) return;
+            if (!_seqHandle.IsActive() && !_hasSpineLayers) return;
 
             float total = Duration;
             _time += Time.deltaTime * Mathf.Max(0f, TimeScale) * _direction;
@@ -349,7 +373,12 @@ namespace LitTimeline
         /// <summary>Kill the running sequence without restoring values.</summary>
         public void Stop()
         {
+#if USING_SPINE
+            if (_hasSpineLayers)
+                SpineLayerDriver.Reset(this, Sequence);
+#endif
             KillHandle();
+            _hasSpineLayers = false;
             _isPlaying = false;
             _onStop.Invoke();
             OnStop?.Invoke();
@@ -396,11 +425,21 @@ namespace LitTimeline
             _seqHandle = LitSequenceBuilder.Build(this, Sequence);
             // Hold the handle still; Update drives Time manually.
             if (_seqHandle.IsActive()) _seqHandle.PlaybackSpeed = 0f;
+            _hasSpineLayers = ContainsSpineLayer(Sequence);
+        }
+
+        private static bool ContainsSpineLayer(TimelineSequenceData data)
+        {
+            if (data?.entries == null) return false;
+            foreach (var entry in data.entries)
+                if (entry != null && entry.layerType == LayerType.Spine && entry.isEnabled)
+                    return true;
+            return false;
         }
 
         private void EnsureBuilt()
         {
-            if (_seqHandle.IsActive()) return;
+            if (IsBuilt) return;
             if (Sequence == null) return;
             _isComplete = false;
             Rebuild();
@@ -410,6 +449,10 @@ namespace LitTimeline
         private void ApplyTime(double time)
         {
             if (_seqHandle.IsActive()) _seqHandle.Time = time;
+#if USING_SPINE
+            if (_hasSpineLayers)
+                SpineLayerDriver.Pose(this, Sequence, (float)time);
+#endif
         }
 
         private void KillHandle()
@@ -470,6 +513,11 @@ namespace LitTimeline
                             marker.InvokeTrigger();
                     }
                 }
+
+#if USING_SPINE
+                if (_hasSpineLayers)
+                    SpineLayerDriver.PollEvents(this, Sequence, from, to, RaiseSpineEvent);
+#endif
             }
             finally
             {

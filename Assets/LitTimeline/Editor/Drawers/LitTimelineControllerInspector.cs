@@ -98,6 +98,9 @@ namespace LitTimeline.Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_onStop"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_onComplete"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("_onLoop"));
+#if USING_SPINE
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("_onSpineEvent"));
+#endif
             serializedObject.ApplyModifiedProperties();
         }
 

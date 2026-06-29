@@ -26,6 +26,11 @@ namespace LitTimeline
         public bool isEnabled = true;
         public Color trackColor = new Color(0.28f, 0.56f, 0.90f, 0.9f);
 
+        // Discriminator for layer kind. Spine layers replace the property-tween
+        // path with a SpineLayerDriver that poses a SkeletonAnimation directly.
+        public LayerType layerType = LayerType.Tween;
+        public SpineLayerData spine = new SpineLayerData();
+
         public event Action OnStart;
         public event Action OnComplete;
 

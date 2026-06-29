@@ -134,6 +134,13 @@ namespace LitTimeline.Editor
             {
                 if (!entry.isEnabled || entry.binding == null) continue;
 
+                if (entry.layerType == LayerType.Spine)
+                {
+                    Debug.LogWarning($"[LitTimeline → AnimationClip] \"{entry.displayName}\": Spine layers cannot be baked into an AnimationClip (skeletons are not Unity animatable properties). Entry skipped.");
+                    skipped++;
+                    continue;
+                }
+
                 if (entry.useCurrentAsStart)
                 {
                     Debug.LogWarning($"[LitTimeline → AnimationClip] \"{entry.displayName}\": useCurrentAsStart=true — explicit start required for baking. Entry skipped.");

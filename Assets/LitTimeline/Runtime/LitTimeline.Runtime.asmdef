@@ -4,7 +4,8 @@
     "references": [
         "LitMotion",
         "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "spine-unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

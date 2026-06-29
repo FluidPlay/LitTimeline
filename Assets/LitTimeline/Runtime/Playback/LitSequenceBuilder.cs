@@ -24,6 +24,10 @@ namespace LitTimeline
             {
                 if (!entry.isEnabled || entry.binding == null) continue;
 
+                // Spine layers are driven externally by SpineLayerDriver — they have no
+                // PropertyAccessor / LitMotion handle, so skip them here.
+                if (entry.layerType == LayerType.Spine) continue;
+
                 var component = ResolveComponent(controller, entry.binding);
                 if (component == null)
                 {

@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using LitMotion;
 using UnityEditor;
 using UnityEngine;
+#if USING_SPINE
+using Spine.Unity;
+#endif
 
 namespace LitTimeline.Editor
 {
@@ -73,6 +76,12 @@ namespace LitTimeline.Editor
         private static Color _blockColorOff = new Color(0.4f, 0.4f, 0.4f, 0.6f);
         private static Color _tickColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
+        // Spine block palette: #6e2cd1 unselected, #9f6adf selected. Picked directly
+        // by entry.layerType so chained Spine entries on a tween-colored track still
+        // show purple (matches the user's spec).
+        private static readonly Color _spineColorUnselected = new Color(110f / 255f, 44f / 255f, 209f / 255f, 0.9f);
+        private static readonly Color _spineColorSelected = new Color(159f / 255f, 106f / 255f, 223f / 255f, 0.95f);
+
         private static readonly Color[] _palette = new[]
         {
             new Color(0.28f, 0.56f, 0.90f, 0.9f),
@@ -131,6 +140,17 @@ namespace LitTimeline.Editor
                 if (entry.binding == null)
                 {
                     _missingEntryIds.Add(entry.entryId);
+                    continue;
+                }
+
+                if (entry.layerType == LayerType.Spine)
+                {
+#if USING_SPINE
+                    var sa = SpineLayerDriver.ResolveSkeleton(_state.Controller, entry.binding);
+                    if (sa == null) _missingEntryIds.Add(entry.entryId);
+#endif
+                    // Without USING_SPINE we can't compile against SkeletonAnimation;
+                    // the data is still preserved, so don't flag it as missing.
                     continue;
                 }
 
@@ -907,9 +927,12 @@ namespace LitTimeline.Editor
             Rect blockRect = new Rect(blockX, trackRect.y + 2, blockW, trackRect.height - 4);
             Rect drawRect = new Rect(clippedX, trackRect.y + 2, clippedW, trackRect.height - 4);
 
+            bool isSpine = entry.layerType == LayerType.Spine;
+            Color baseColor = isSpine ? _spineColorUnselected : trackColor;
+            Color highlight = isSpine ? _spineColorSelected : Color.Lerp(trackColor, Color.white, 0.35f);
             Color blockCol = !entry.isEnabled ? _blockColorOff
-                : isSelected ? Color.Lerp(trackColor, Color.white, 0.35f)
-                : trackColor;
+                : isSelected ? highlight
+                : baseColor;
             EditorGUI.DrawRect(drawRect, blockCol);
 
             if (clippedW > 40)
@@ -1021,11 +1044,48 @@ namespace LitTimeline.Editor
                 });
             }
 
+#if USING_SPINE
+            AppendSpineMenuItems(menu, ctrl, path =>
+            {
+                AddSpineEntry(ctrl, seq, path);
+            });
+#endif
+
             if (menu.GetItemCount() == 0)
                 menu.AddDisabledItem(new GUIContent("No supported properties found"));
 
             menu.ShowAsContext();
         }
+
+#if USING_SPINE
+        private static void AppendSpineMenuItems(GenericMenu menu, LitTimelineController ctrl,
+            System.Action<string> onPick)
+        {
+            ScanSpineSkeletons(ctrl.transform, (path, sa) =>
+            {
+                string capturedPath = path;
+                string label = string.IsNullOrEmpty(path)
+                    ? "SkeletonAnimation/Spine Animation"
+                    : $"{path}/SkeletonAnimation/Spine Animation";
+                menu.AddItem(new GUIContent(label), false, () => onPick(capturedPath));
+            });
+        }
+
+        private static void ScanSpineSkeletons(Transform root, System.Action<string, SkeletonAnimation> visit)
+        {
+            ScanSpineRecursive(root, root, visit);
+        }
+
+        private static void ScanSpineRecursive(Transform root, Transform current,
+            System.Action<string, SkeletonAnimation> visit)
+        {
+            string path = AnimationUtility.CalculateTransformPath(current, root);
+            var sa = current.GetComponent<SkeletonAnimation>();
+            if (sa != null) visit(path, sa);
+            foreach (Transform child in current)
+                ScanSpineRecursive(root, child, visit);
+        }
+#endif
 
         // ─── Chain context menu ────────────────────────────────────────────────
         private void ShowChainMenu(LitTimelineController ctrl, TimelineSequenceData seq, List<TimelineEntryData> track)
@@ -1044,6 +1104,14 @@ namespace LitTimeline.Editor
                 menu.AddItem(new GUIContent(label), false, () =>
                     AddChainEntry(ctrl, seq, capturedTrack, capturedProp));
             }
+
+#if USING_SPINE
+            var capturedChainTrack = track;
+            AppendSpineMenuItems(menu, ctrl, path =>
+            {
+                AddChainedSpineEntry(ctrl, seq, capturedChainTrack, path);
+            });
+#endif
 
             if (menu.GetItemCount() == 0)
                 menu.AddDisabledItem(new GUIContent("No supported properties found"));
@@ -1228,7 +1296,7 @@ namespace LitTimeline.Editor
                         FindTrackGap(_dragEntry, newDelay, newEffDur, out float prevEnd, out _);
                         newDelay = Mathf.Max(newDelay, prevEnd);
                         newEffDur = _dragStartDuration - (newDelay - _dragStartDelay);
-                        _dragEntry.duration = newEffDur * Mathf.Max(0.001f, _dragEntry.speed);
+                        ApplyResizedEffectiveDuration(_dragEntry, newEffDur);
                         _dragEntry.delay = newDelay;
                         break;
                     }
@@ -1237,7 +1305,7 @@ namespace LitTimeline.Editor
                         float newEffDur = SnapValue(Mathf.Max(0.05f, _dragStartDuration + deltaSecs), e.control);
                         FindTrackGap(_dragEntry, _dragEntry.delay, newEffDur, out _, out float nextStart);
                         newEffDur = Mathf.Min(newEffDur, Mathf.Max(0.05f, nextStart - _dragEntry.delay));
-                        _dragEntry.duration = newEffDur * Mathf.Max(0.001f, _dragEntry.speed);
+                        ApplyResizedEffectiveDuration(_dragEntry, newEffDur);
                         break;
                     }
                 }
@@ -1251,6 +1319,24 @@ namespace LitTimeline.Editor
                 _dragMode = DragMode.None;
                 _dragEntry = null;
                 e.Use();
+            }
+        }
+
+        // For tween layers, the user-authored `duration` is the canonical playback length
+        // and Speed scales the on-timeline footprint, so resizing rewrites duration.
+        // For Spine layers, `duration == animationLength` is fixed (animation has a
+        // natural length); resizing instead recomputes Speed.
+        private static void ApplyResizedEffectiveDuration(TimelineEntryData entry, float newEffDur)
+        {
+            if (entry.layerType == LayerType.Spine)
+            {
+                float animLen = Mathf.Max(0.0001f, entry.spine != null ? entry.spine.animationLength : entry.duration);
+                entry.duration = animLen;
+                entry.speed = Mathf.Max(0.001f, animLen / Mathf.Max(0.001f, newEffDur));
+            }
+            else
+            {
+                entry.duration = newEffDur * Mathf.Max(0.001f, entry.speed);
             }
         }
 
@@ -1280,6 +1366,14 @@ namespace LitTimeline.Editor
         // ─── Entry inspector ───────────────────────────────────────────────────
         private void DrawEntryInspector(TimelineEntryData entry, LitTimelineController ctrl)
         {
+#if USING_SPINE
+            if (entry.layerType == LayerType.Spine)
+            {
+                DrawSpineEntryInspector(entry, ctrl);
+                return;
+            }
+#endif
+
             GUILayout.FlexibleSpace();
             GUILayout.BeginVertical(EditorStyles.helpBox);
 
@@ -1405,6 +1499,143 @@ namespace LitTimeline.Editor
             GUILayout.EndVertical();
         }
 
+#if USING_SPINE
+        private void DrawSpineEntryInspector(TimelineEntryData entry, LitTimelineController ctrl)
+        {
+            if (entry.spine == null) entry.spine = new SpineLayerData();
+
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+
+            GUILayout.Space(5);
+
+            bool isMissing = _missingEntryIds.Contains(entry.entryId);
+            if (isMissing)
+            {
+                var prevColor = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(0.9f, 0.3f, 0.3f, 1f);
+                GUILayout.BeginHorizontal(EditorStyles.helpBox);
+                GUI.backgroundColor = prevColor;
+                GUILayout.Label(EditorGUIUtility.IconContent("console.warnicon.sml"), GUILayout.Width(20));
+                GUILayout.Label(
+                    $"Missing: SkeletonAnimation at \"{entry.binding?.hierarchyPath}\" not found.",
+                    EditorStyles.wordWrappedMiniLabel);
+                GUILayout.EndHorizontal();
+            }
+
+            // Name + Animation dropdown (Animation replaces the tween's Color picker).
+            GUILayout.BeginHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Name", GUILayout.Width(40));
+            string defaultName = BlockLabel(entry, ctrl.transform);
+            string displayedName = string.IsNullOrEmpty(entry.displayName) ? defaultName : entry.displayName;
+            string newName = EditorGUILayout.DelayedTextField(displayedName, GUILayout.Width(200));
+            if (newName != displayedName)
+            {
+                Undo.RecordObject(ctrl.Clip, "Rename Spine Layer");
+                entry.displayName = (newName == defaultName) ? string.Empty : newName;
+                EditorUtility.SetDirty(ctrl.Clip);
+            }
+            if (!string.IsNullOrEmpty(entry.displayName) && GUILayout.Button(new GUIContent("↺", "Reset name to default"), EditorStyles.miniButton, GUILayout.Width(20)))
+            {
+                Undo.RecordObject(ctrl.Clip, "Reset Spine Layer Name");
+                entry.displayName = string.Empty;
+                EditorUtility.SetDirty(ctrl.Clip);
+            }
+            GUILayout.EndHorizontal();
+
+            // Animation dropdown sourced from the SkeletonAnimation's data.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Animation", GUILayout.Width(70));
+
+            var sa = SpineEditorSupport.ResolveSkeleton(ctrl, entry.binding);
+            var anims = SpineEditorSupport.GetAnimations(sa);
+
+            EditorGUI.BeginDisabledGroup(isMissing || anims.Count == 0);
+            int currentIdx = -1;
+            string[] names = new string[anims.Count];
+            for (int i = 0; i < anims.Count; i++)
+            {
+                names[i] = anims[i].Name;
+                if (anims[i].Name == entry.spine.animationName) currentIdx = i;
+            }
+
+            int displayIdx = currentIdx >= 0 ? currentIdx : 0;
+            int newIdx = anims.Count == 0
+                ? -1
+                : EditorGUILayout.Popup(displayIdx, names, GUILayout.Width(180));
+
+            if (anims.Count == 0)
+            {
+                GUILayout.Label(sa == null ? "(no SkeletonAnimation)" : "(no animations)", EditorStyles.miniLabel);
+            }
+            else if (newIdx != currentIdx && newIdx >= 0 && newIdx < anims.Count)
+            {
+                Undo.RecordObject(ctrl.Clip, "Change Spine Animation");
+                entry.spine.animationName = anims[newIdx].Name;
+                // Changing animation rebases the natural length and the on-timeline
+                // length follows (duration = animationLength; effective uses speed).
+                entry.spine.animationLength = Mathf.Max(0.0001f, anims[newIdx].Duration);
+                entry.duration = entry.spine.animationLength;
+                EditorUtility.SetDirty(ctrl.Clip);
+            }
+            EditorGUI.EndDisabledGroup();
+
+            GUILayout.EndHorizontal();
+
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.BeginDisabledGroup(isMissing);
+
+            // Delay row + read-only effective duration display.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Delay", GUILayout.Width(38));
+            float newDelay = EditorGUILayout.DelayedFloatField(entry.delay, GUILayout.Width(52));
+            if (newDelay != entry.delay) entry.delay = SnapValue(Mathf.Max(0f, newDelay));
+            GUILayout.Space(8);
+            GUILayout.Label("Duration", GUILayout.Width(55));
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.FloatField(entry.EffectiveDuration, GUILayout.Width(52));
+            EditorGUI.EndDisabledGroup();
+            GUILayout.Label($"(= {entry.spine.animationLength:F2}s / {Mathf.Max(0.001f, entry.speed):F2}x)", EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+
+            // Loop Type | Loops | Speed | Bridge toggle.
+            GUILayout.BeginVertical(GUILayout.Width(position.width * 0.5f));
+            entry.spine.loopMode = (SpineLoopMode)EditorGUILayout.EnumPopup("Loop Type", entry.spine.loopMode);
+            entry.loops = Mathf.Max(1, EditorGUILayout.IntField("Loops", entry.loops));
+
+            float newSpeed = Mathf.Max(0.001f, EditorGUILayout.FloatField("Speed", entry.speed));
+            if (!Mathf.Approximately(newSpeed, entry.speed))
+            {
+                entry.speed = newSpeed;
+                // Keep duration locked to animationLength; on-timeline length follows speed.
+                entry.duration = Mathf.Max(0.0001f, entry.spine.animationLength);
+            }
+
+            GUILayout.EndVertical();
+
+            EditorGUI.EndDisabledGroup();
+
+            GUILayout.Space(4);
+            entry.spine.bridgeSpineEvents = EditorGUILayout.ToggleLeft(
+                new GUIContent("Bridge Spine Events",
+                    "Call LitTimelineController.OnSpineEvent for each Spine event encountered while this layer plays."),
+                entry.spine.bridgeSpineEvents);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(ctrl.Clip, "Edit Spine Layer");
+                EditorUtility.SetDirty(ctrl.Clip);
+            }
+
+            GUILayout.EndVertical();
+        }
+#endif
+
         private static string TrackLabel(TimelineEntryData entry, Transform root) =>
             string.IsNullOrEmpty(entry.displayName)
                 ? ObjectName(entry.binding, root)
@@ -1415,6 +1646,10 @@ namespace LitTimeline.Editor
             if (!string.IsNullOrEmpty(entry.displayName)) return entry.displayName;
             if (entry.binding == null) return "?";
             string objName = ObjectName(entry.binding, root);
+
+            if (entry.layerType == LayerType.Spine)
+                return $"{objName} - Spine Animation";
+
             var blockDesc = PropertyAccessorRegistry.GetDescriptor(entry.binding.componentTypeName, entry.binding.propertyName);
             string propDisplay = blockDesc?.DisplayName ?? entry.binding.propertyName;
 
@@ -1597,6 +1832,16 @@ namespace LitTimeline.Editor
                 loopType = source.loopType,
                 loops = source.loops,
                 isEnabled = source.isEnabled,
+                layerType = source.layerType,
+                spine = source.spine == null
+                    ? new SpineLayerData()
+                    : new SpineLayerData
+                    {
+                        animationName = source.spine.animationName,
+                        animationLength = source.spine.animationLength,
+                        loopMode = source.spine.loopMode,
+                        bridgeSpineEvents = source.spine.bridgeSpineEvents,
+                    },
             };
 
             seq.entries.Add(copy);
@@ -1627,6 +1872,84 @@ namespace LitTimeline.Editor
             _state.SelectedEntry = entry;
             EditorUtility.SetDirty(ctrl.Clip);
         }
+
+#if USING_SPINE
+        private void AddSpineEntry(LitTimelineController ctrl, TimelineSequenceData seq, string hierarchyPath)
+        {
+            Undo.RecordObject(ctrl.Clip, "Add Spine Layer");
+
+            var binding = new PropertyBinding
+            {
+                hierarchyPath = hierarchyPath,
+                componentTypeName = typeof(SkeletonAnimation).FullName,
+                propertyName = SpineSentinelProperty,
+                axis = PropertyAxis.None,
+            };
+
+            var entry = BuildSpineEntry(ctrl, binding, 0f);
+            seq.entries.Add(entry);
+            _state.SelectedEntry = entry;
+            EditorUtility.SetDirty(ctrl.Clip);
+        }
+
+        private void AddChainedSpineEntry(LitTimelineController ctrl, TimelineSequenceData seq,
+            List<TimelineEntryData> track, string hierarchyPath)
+        {
+            float chainDelay = 0f;
+            foreach (var e in track)
+                if (e.EndTime > chainDelay)
+                    chainDelay = e.EndTime;
+
+            var binding = new PropertyBinding
+            {
+                hierarchyPath = hierarchyPath,
+                componentTypeName = typeof(SkeletonAnimation).FullName,
+                propertyName = SpineSentinelProperty,
+                axis = PropertyAxis.None,
+            };
+
+            Undo.RecordObject(ctrl.Clip, "Add Chained Spine Layer");
+            var entry = BuildSpineEntry(ctrl, binding, chainDelay);
+            entry.trackId = track[0].trackId;
+            seq.entries.Add(entry);
+            _state.SelectedEntry = entry;
+            EditorUtility.SetDirty(ctrl.Clip);
+        }
+
+        // Sentinel value stored in PropertyBinding.propertyName for Spine layers.
+        // No PropertyAccessor is registered for it, so any code path that incorrectly
+        // tries to look up an accessor for a Spine layer harmlessly returns null.
+        private const string SpineSentinelProperty = "spine_animation";
+
+        private TimelineEntryData BuildSpineEntry(LitTimelineController ctrl, PropertyBinding binding, float delay)
+        {
+            var entry = new TimelineEntryData
+            {
+                binding = binding,
+                layerType = LayerType.Spine,
+                trackColor = _spineColorUnselected,
+                delay = delay,
+                speed = 1f,
+                loops = 1,
+                spine = new SpineLayerData(),
+            };
+
+            var sa = SpineEditorSupport.ResolveSkeleton(ctrl, binding);
+            var anims = SpineEditorSupport.GetAnimations(sa);
+            if (anims.Count > 0)
+            {
+                entry.spine.animationName = anims[0].Name;
+                entry.spine.animationLength = Mathf.Max(0.0001f, anims[0].Duration);
+            }
+            else
+            {
+                entry.spine.animationName = string.Empty;
+                entry.spine.animationLength = 1f;
+            }
+            entry.duration = entry.spine.animationLength;
+            return entry;
+        }
+#endif
 
         private void CaptureValue(LitTimelineController ctrl, TimelineEntryData entry, bool isStart)
         {
